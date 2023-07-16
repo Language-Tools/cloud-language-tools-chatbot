@@ -1,1 +1,2 @@
+cloudlanguagetools>=5.8
 python-telegram-bot
