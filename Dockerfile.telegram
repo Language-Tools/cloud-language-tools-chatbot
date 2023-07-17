@@ -1,5 +1,5 @@
 FROM python:3.9-slim-bookworm
-RUN apt-get install -y wget
+RUN apt-get update -y && apt-get install -y wget
 
 # install python dependencies
 COPY requirements.txt ./
