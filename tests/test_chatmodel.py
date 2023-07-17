@@ -36,7 +36,7 @@ class TestChatModel(unittest.TestCase):
         self.chat_model = cloudlanguagetools_chatbot.chatmodel.ChatModel(self.manager)
         self.chat_model.set_send_message_callback(self.send_message_fn, self.send_audio_fn, self.send_error_fn)
         self.process_message_sync = async_to_sync(self.chat_model.process_message)
-        self.is_new_sentence_sync = async_to_sync(self.chat_model.is_new_sentence)
+        self.categorize_input_type_sync = async_to_sync(self.chat_model.categorize_input_type)
 
     async def send_error_fn(self, message):
         self.error_list.append(message)
@@ -205,18 +205,31 @@ class TestChatModel(unittest.TestCase):
         # print
         self.verify_single_audio_message('黑社會', 'zh-HK')
 
-    def test_is_new_sentence(self):
-        # pytest --log-cli-level=INFO tests/test_chatmodel.py -k test_is_new_sentence
-        # pytest --log-cli-level=DEBUG tests/test_chatmodel.py -k test_is_new_sentence
+    def test_categorize_input(self):
+        # pytest --log-cli-level=INFO tests/test_chatmodel.py -k test_categorize_input
+        # pytest --log-cli-level=DEBUG tests/test_chatmodel.py -k test_categorize_input
+        from cloudlanguagetools_chatbot.chatmodel import InputType
 
-        self.assertFalse(self.is_new_sentence_sync('呢條路係行返屋企嘅路', 
-                                                   'Is there another chinese character which means road?'))
+        self.assertEquals(self.categorize_input_type_sync('呢條路係行返屋企嘅路', 
+                                                   'Is there another chinese character which means road?'),
+                                                   InputType.question_or_command)
 
-        self.assertTrue(self.is_new_sentence_sync('呢條路係行返屋企嘅路', 
-                                                   '黑社會'))
+        self.assertEquals(self.categorize_input_type_sync('呢條路係行返屋企嘅路', 
+                                                   '黑社會'),
+                                                   InputType.new_sentence)
 
-        self.assertFalse(self.is_new_sentence_sync('黑社會', 
-                                                   'When do we use this ?'))
+        self.assertEquals(self.categorize_input_type_sync('黑社會', 
+                                                   'When do we use this ?'),
+                                                   InputType.question_or_command)
 
-        self.assertFalse(self.is_new_sentence_sync('黑社會', 
-                                                   'pronounce using amazon'))
+        self.assertEquals(self.categorize_input_type_sync('黑社會', 
+                                                   'pronounce using amazon'),
+                                                   InputType.question_or_command)
+
+        self.assertEquals(self.categorize_input_type_sync('黑社會', 
+        'instructions: when I give you a sentence in cantonese, pronounce it using Azure service and female voice, then translate it into english, and break down the cantonese sentence into words'),
+                                                   InputType.instructions)
+
+        self.assertEquals(self.categorize_input_type_sync('黑社會', 
+        'instruction: translate from french to english'),
+                                                   InputType.instructions)                                                   

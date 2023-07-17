@@ -15,9 +15,10 @@ logger = logging.getLogger(__name__)
 
 class InputType(StrEnum):
     new_sentence = 'NEW_SENTENCE',
-    question_or_instruction = 'QUESTION_OR_INSTRUCTION'
+    question_or_command = 'QUESTION_OR_COMMAND'
+    instructions = 'INSTRUCTIONS'
 
-class IsNewSentenceQuery(pydantic.BaseModel):
+class CategorizeInputQuery(pydantic.BaseModel):
     input_type: InputType = pydantic.Field(description=prompts.DESCRIPTION_FLD_IS_NEW_QUESTION)
 
 
@@ -39,8 +40,6 @@ class ChatModel():
         self.instruction = None
         self.message_history = []
         self.last_call_messages = None
-        self.total_tokens = 0
-        self.latest_token_usage = 0
         self.last_input_sentence = None
         self.audio_format = audio_format
     
@@ -99,22 +98,18 @@ class ChatModel():
             request_timeout=REQUEST_TIMEOUT
         )
 
-        self.latest_token_usage = response['usage']['total_tokens']
-        self.latest_prompt_usage = response['usage']['prompt_tokens']
-        self.latest_completion_usage = response['usage']['completion_tokens']
-        self.total_tokens += self.latest_token_usage
-
         return response
 
-    def status(self):
-        return f'total_tokens: {self.total_tokens}, latest_token_usage: {self.latest_token_usage} (prompt: {self.latest_prompt_usage} completion: {self.latest_completion_usage})'
-
-    async def is_new_sentence(self, last_input_sentence, input_sentence) -> bool:
+    async def categorize_input_type(self, last_input_sentence, input_sentence) -> InputType:
         """return true if input is a new sentence. we'll use this to clear history"""
 
+        last_input_sentence_entry = []
+        if last_input_sentence != None:
+            last_input_sentence_entry = [{"role": "user", "content": last_input_sentence}]
+
         messages = [
-            {"role": "system", "content": prompts.SYSTEM_MSG_ASSISTANT},
-            {"role": "user", "content": last_input_sentence},
+            {"role": "system", "content": prompts.SYSTEM_MSG_ASSISTANT}
+        ] + last_input_sentence_entry + [
             {"role": "user", "content": input_sentence}
         ]
 
@@ -126,7 +121,7 @@ class ChatModel():
             functions=[{
                 'name': new_sentence_function_name,
                 'description': prompts.DESCRIPTION_FN_IS_NEW_QUESTION,
-                'parameters': IsNewSentenceQuery.model_json_schema(),
+                'parameters': CategorizeInputQuery.model_json_schema(),
             }],
             function_call={'name': new_sentence_function_name},
             temperature=0.0,
@@ -137,10 +132,10 @@ class ChatModel():
         function_name = message['function_call']['name']
         assert function_name == new_sentence_function_name
         arguments = json.loads(message["function_call"]["arguments"])
-        input_type_result = IsNewSentenceQuery(**arguments)
+        input_type_result = CategorizeInputQuery(**arguments)
         
         logger.info(f'input sentence: [{input_sentence}] input type: {input_type_result}')
-        return input_type_result.input_type == InputType.new_sentence
+        return input_type_result.input_type
 
     async def process_audio(self, audio_tempfile: tempfile.NamedTemporaryFile):
         async_recognize_audio = sync_to_async(self.chatapi.recognize_audio)
@@ -148,16 +143,22 @@ class ChatModel():
         await self.send_message(text)
         await self.process_message(text)
 
+    async def process_instructions(self, instructions):
+        self.set_instruction(instructions)
+        await self.send_message(f'My instructions are now: {self.get_instruction()}')
+
     async def process_message(self, input_message):
     
-        # do we need to clear history ?
-        if self.last_input_sentence == None:
-            # this is the first user message we are processing, it's a new sentence
-            self.last_input_sentence = input_message
-        elif await self.is_new_sentence(self.last_input_sentence, input_message):
+        input_category = await self.categorize_input_type(self.last_input_sentence, input_message)
+        if input_category == InputType.new_sentence:
             # user is moving on to a new sentence, clear history
             self.message_history = []
             self.last_input_sentence = input_message
+        elif input_category == InputType.question_or_command:
+            # user has a question about previous sentence, don't clear history
+            pass
+        elif input_category == InputType.instructions:
+            return await self.process_instructions(input_message)
 
         max_calls = 10
         continue_processing = True

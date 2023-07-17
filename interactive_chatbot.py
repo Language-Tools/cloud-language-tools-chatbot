@@ -48,15 +48,10 @@ class InteractiveChatbot():
     async def run(self):
         while True:
             user_input = input("Enter a message: ")
-            if user_input.startswith('instructions:'):
-                instruction = user_input[len('instructions:'):].strip()
-                self.chat_model.set_instruction(instruction)
-                logger.info(f'instructions set to: [{self.chat_model.get_instruction()}]')
-            elif user_input.startswith('history:'):
+            if user_input.startswith('history:'):
                 logger.info(f'history:\n {pprint.pformat(self.chat_model.get_last_call_messages())}')
             else:
                 await self.chat_model.process_message(user_input)
-                logger.info(self.chat_model.status())
 
 
 if __name__ == '__main__':
