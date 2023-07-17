@@ -214,3 +214,9 @@ class TestChatModel(unittest.TestCase):
 
         self.assertTrue(self.is_new_sentence_sync('呢條路係行返屋企嘅路', 
                                                    '黑社會'))
+
+        self.assertFalse(self.is_new_sentence_sync('黑社會', 
+                                                   'When do we use this ?'))
+
+        self.assertFalse(self.is_new_sentence_sync('黑社會', 
+                                                   'pronounce using amazon'))
