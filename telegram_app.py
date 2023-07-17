@@ -29,6 +29,7 @@ import telegram
 from telegram import Update
 from telegram.ext import filters, MessageHandler, ApplicationBuilder, CommandHandler, ContextTypes
 import telegram.constants
+import telegram.helpers
 
 
 TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
@@ -48,7 +49,8 @@ def received_audio_lambda(bot, chat_id):
 
 def received_status_lambda(bot, chat_id):
     async def send_status(message):
-        await bot.send_message(chat_id=chat_id, text=f'_{message}_')
+        escaped_text = telegram.helpers.escape_markdown(message, version=2)
+        await bot.send_message(chat_id=chat_id, text=f'_{escaped_text}_', parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
     return send_status
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
