@@ -31,15 +31,15 @@ class TestChatModel(unittest.TestCase):
     def setUp(self):
         self.message_list = []
         self.audio_list = [] # list of tempfile.NamedTemporaryFile
-        self.error_list = []
+        self.status_list = []
         logger.info('creating chat model')
         self.chat_model = cloudlanguagetools_chatbot.chatmodel.ChatModel(self.manager)
-        self.chat_model.set_send_message_callback(self.send_message_fn, self.send_audio_fn, self.send_error_fn)
+        self.chat_model.set_send_message_callback(self.send_message_fn, self.send_audio_fn, self.send_status_fn)
         self.process_message_sync = async_to_sync(self.chat_model.process_message)
         self.categorize_input_type_sync = async_to_sync(self.chat_model.categorize_input_type)
 
-    async def send_error_fn(self, message):
-        self.error_list.append(message)
+    async def send_status_fn(self, message):
+        self.status_list.append(message)
 
     async def send_message_fn(self, message):
         self.message_list.append(message)
@@ -60,8 +60,7 @@ class TestChatModel(unittest.TestCase):
     def test_french_translation(self):
         # pytest --log-cli-level=DEBUG tests/test_chatmodel.py -k test_french_translation
 
-        instruction = "When given a sentence in French, translate it to English"
-        self.chat_model.set_instruction(instruction)
+        self.process_message_sync("instructions: When given a sentence in French, translate it to English")
 
         self.process_message_sync("Je ne suis pas intéressé.")
         self.assertEquals(self.message_list, ["I'm not interested."])
@@ -70,8 +69,7 @@ class TestChatModel(unittest.TestCase):
     def test_chinese_translation_transliteration(self):
         # pytest --log-cli-level=DEBUG tests/test_chatmodel.py -k test_chinese_translation_transliteration
 
-        instruction = "When given a sentence in Chinese, translate it to English, then transliterate the Chinese"
-        self.chat_model.set_instruction(instruction)
+        self.process_message_sync("instructions: When given a sentence in Chinese, translate it to English, then transliterate the Chinese")
 
         self.process_message_sync("成本很低")
         self.assertEquals(self.message_list, ["The cost is low.", 'chéngběn hěn dī'])
@@ -80,8 +78,8 @@ class TestChatModel(unittest.TestCase):
     def test_chinese_translation_breakdown(self):
         # pytest --log-cli-level=DEBUG tests/test_chatmodel.py -k test_chinese_translation_breakdown
 
-        instruction = "When given a sentence in Chinese, translate it to English, then breakdown the chinese sentence"
-        self.chat_model.set_instruction(instruction)
+        instruction = "instructions: When given a sentence in Chinese, translate it to English, then breakdown the chinese sentence"
+        self.process_message_sync(instruction)
 
         self.process_message_sync("成本很低")
         self.assertEquals(self.message_list, ["The cost is low.", """成本: chéngběn, (manufacturing, production etc) costs
@@ -92,8 +90,8 @@ class TestChatModel(unittest.TestCase):
     def test_chinese_translation_audio(self):
         # pytest --log-cli-level=DEBUG tests/test_chatmodel.py -k test_chinese_translation_audio
 
-        instruction = "When given a sentence in Chinese, translate it to English, and pronounce the chinese sentence."
-        self.chat_model.set_instruction(instruction)
+        instruction = "your instructions: When given a sentence in Chinese, translate it to English, and pronounce the chinese sentence."
+        self.process_message_sync(instruction)
 
         self.process_message_sync("成本很低")
         self.assertEquals(self.message_list, ["The cost is low."])
@@ -112,8 +110,8 @@ class TestChatModel(unittest.TestCase):
 
     def test_cantonese_instructions(self):
         """test whether the model can follow steps repeatedly when given new input sentences"""
-        instructions = 'when I give you a sentence in cantonese, pronounce it using Azure service, then translate it into english, and break down the cantonese sentence into words'
-        self.chat_model.set_instruction(instructions)
+        instructions = 'instructions: when I give you a sentence in cantonese, pronounce it using Azure service, then translate it into english, and break down the cantonese sentence into words'
+        self.process_message_sync(instructions)
 
         # first input sentence
         self.process_message_sync('呢條路係行返屋企嘅路')
@@ -149,8 +147,8 @@ class TestChatModel(unittest.TestCase):
         # pytest --log-cli-level=INFO tests/test_chatmodel.py -k test_cantonese_additional_questions
 
         """follow instructions, but then ask an additional question regarding a sentence"""
-        instructions = 'when I give you a sentence in cantonese, pronounce it using Azure service, then translate it into english, and break down the cantonese sentence into words'
-        self.chat_model.set_instruction(instructions)
+        instructions = 'instructions: when I give you a sentence in cantonese, pronounce it using Azure service, then translate it into english, and break down the cantonese sentence into words'
+        self.process_message_sync(instructions)
 
         # send input sentence
         self.process_message_sync('黑社會')
@@ -167,8 +165,8 @@ class TestChatModel(unittest.TestCase):
         # pytest --log-cli-level=INFO tests/test_chatmodel.py -k test_cantonese_additional_questions_2
 
         """follow instructions, but then ask an additional question regarding a sentence"""
-        instructions = 'when I give you a sentence in cantonese, pronounce it using Azure service, then translate it into english, and break down the cantonese sentence into words'
-        self.chat_model.set_instruction(instructions)
+        instructions = 'instructions: when I give you a sentence in cantonese, pronounce it using Azure service, then translate it into english, and break down the cantonese sentence into words'
+        self.process_message_sync(instructions)
 
         # first input sentence
         self.process_message_sync('呢條路係行返屋企嘅路')
@@ -192,8 +190,8 @@ class TestChatModel(unittest.TestCase):
         # pytest --log-cli-level=DEBUG tests/test_chatmodel.py -k test_cantonese_additional_questions_3
 
         """follow instructions, but then ask an additional question regarding a sentence"""
-        instructions = 'when I give you a sentence in cantonese, pronounce it using Azure service, then translate it into english, and break down the cantonese sentence into words'
-        self.chat_model.set_instruction(instructions)
+        instructions = 'instructions: when I give you a sentence in cantonese, pronounce it using Azure service, then translate it into english, and break down the cantonese sentence into words'
+        self.process_message_sync(instructions)
 
         # send input sentence
         self.process_message_sync('黑社會')

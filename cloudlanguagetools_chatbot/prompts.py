@@ -19,3 +19,12 @@ INSTRUCTIONS if it is an instruction or a set of instructions of tasks to run re
 - Your instructions: When I give you a sentence in Chinese, translate it to English, then transliterate the Chinese
 - instructions: Every word Japanese must be translated to Czech
 """
+
+DESCRIPTION_FLD_INSTRUCTIONS = """In case the user is providing a set of instructions or a talk to run repeatedly on the next input sentence,
+this field must contain the instructions.
+Examples: 
+- Input: instructions: When I give you a sentence in French, translate it to English
+- Instructions: When given a sentence in French, translate it to English
+- Input: Your instructions: When I give you a sentence in Chinese, translate it to English, then transliterate the Chinese
+- Instructions: When given a sentence in Chinese, translate it to English, then transliterate the Chinese
+"""

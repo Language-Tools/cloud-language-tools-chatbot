@@ -5,6 +5,7 @@ import pprint
 import openai
 import tempfile
 import time
+from typing import Optional
 from strenum import StrEnum
 from asgiref.sync import  sync_to_async
 import cloudlanguagetools.chatapi
@@ -20,6 +21,7 @@ class InputType(StrEnum):
 
 class CategorizeInputQuery(pydantic.BaseModel):
     input_type: InputType = pydantic.Field(description=prompts.DESCRIPTION_FLD_IS_NEW_QUESTION)
+    instructions: Optional[str] = pydantic.Field(description=prompts.DESCRIPTION_FLD_INSTRUCTIONS)
 
 
 REQUEST_TIMEOUT=10
@@ -52,19 +54,10 @@ class ChatModel():
     def get_last_call_messages(self):
         return self.last_call_messages
 
-    def set_send_message_callback(self, send_message_fn, send_audio_fn, send_error_fn):
-        self.send_message_fn = send_message_fn
-        self.send_audio_fn = send_audio_fn
-        self.send_error_fn = send_error_fn
-
-    async def send_message(self, message):
-        await self.send_message_fn(message)
-
-    async def send_audio(self, audio_tempfile):
-        await self.send_audio_fn(audio_tempfile)
-
-    async def send_error(self, error: str):
-        await self.send_error_fn(error)
+    def set_send_message_callback(self, send_message_fn, send_audio_fn, send_status_fn):
+        self.send_message = send_message_fn
+        self.send_audio = send_audio_fn
+        self.send_status = send_status_fn
 
     def get_system_messages(self):
         # do we have any instructions ?
@@ -113,52 +106,53 @@ class ChatModel():
             {"role": "user", "content": input_sentence}
         ]
 
-        new_sentence_function_name = 'is_new_sentence'
+        categorize_input_type_name = 'category_input_type'
 
         response = await openai.ChatCompletion.acreate(
             model="gpt-3.5-turbo-0613",
             messages=messages,
             functions=[{
-                'name': new_sentence_function_name,
+                'name': categorize_input_type_name,
                 'description': prompts.DESCRIPTION_FN_IS_NEW_QUESTION,
                 'parameters': CategorizeInputQuery.model_json_schema(),
             }],
-            function_call={'name': new_sentence_function_name},
+            function_call={'name': categorize_input_type_name},
             temperature=0.0,
             request_timeout=REQUEST_TIMEOUT
         )
 
         message = response['choices'][0]['message']
         function_name = message['function_call']['name']
-        assert function_name == new_sentence_function_name
+        assert function_name == categorize_input_type_name
+        logger.debug(f'categorize_input_type response: {pprint.pformat(message)}')
         arguments = json.loads(message["function_call"]["arguments"])
         input_type_result = CategorizeInputQuery(**arguments)
         
         logger.info(f'input sentence: [{input_sentence}] input type: {input_type_result}')
-        return input_type_result.input_type
+        return input_type_result
 
     async def process_audio(self, audio_tempfile: tempfile.NamedTemporaryFile):
         async_recognize_audio = sync_to_async(self.chatapi.recognize_audio)
         text = await async_recognize_audio(audio_tempfile, self.audio_format)
-        await self.send_message(text)
+        await self.send_status(f'recognized text: {text}')
         await self.process_message(text)
 
     async def process_instructions(self, instructions):
         self.set_instruction(instructions)
-        await self.send_message(f'My instructions are now: {self.get_instruction()}')
+        await self.send_status(f'My instructions are now: {self.get_instruction()}')
 
     async def process_message(self, input_message):
     
-        input_category = await self.categorize_input_type(self.last_input_sentence, input_message)
-        if input_category == InputType.new_sentence:
+        input_type_result = await self.categorize_input_type(self.last_input_sentence, input_message)
+        if input_type_result.input_type == InputType.new_sentence:
             # user is moving on to a new sentence, clear history
             self.message_history = []
             self.last_input_sentence = input_message
-        elif input_category == InputType.question_or_command:
+        elif input_type_result.input_type == InputType.question_or_command:
             # user has a question about previous sentence, don't clear history
             pass
-        elif input_category == InputType.instructions:
-            return await self.process_instructions(input_message)
+        elif input_type_result.input_type == InputType.instructions:
+            return await self.process_instructions(input_type_result.instructions)
 
         max_calls = 10
         continue_processing = True
@@ -210,7 +204,7 @@ class ChatModel():
                     self.message_history.append({"role": "assistant", "content": message_content})
         except Exception as e:
             logger.exception(f'error processing function call')
-            await self.send_error(str(e))                
+            await self.send_status(f'error: {str(e)}')
 
 
     async def process_function_call(self, function_name, arguments):
