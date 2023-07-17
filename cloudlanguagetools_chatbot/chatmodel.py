@@ -141,11 +141,13 @@ class ChatModel():
     async def process_message(self, input_message):
     
         # do we need to clear history ?
-        if len(self.message_history) > 0:
-            new_sentence = await self.is_new_sentence(self.last_input_sentence, input_message)
-            if new_sentence:
-                self.message_history = []
-                self.last_input_sentence = input_message
+        if self.last_input_sentence == None:
+            # this is the first user message we are processing, it's a new sentence
+            self.last_input_sentence = input_message
+        elif await self.is_new_sentence(self.last_input_sentence, input_message):
+            # user is moving on to a new sentence, clear history
+            self.message_history = []
+            self.last_input_sentence = input_message
 
         max_calls = 10
         continue_processing = True
