@@ -1,4 +1,4 @@
-FROM FROM ubuntu:20.04
+FROM ubuntu:20.04
 RUN apt-get update -y && apt-get install -y libasound2 python3-pip git gnupg build-essential wget
 
 # install python dependencies
