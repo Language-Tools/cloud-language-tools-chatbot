@@ -1,0 +1,12 @@
+FROM python:3.9-slim-bookworm
+
+# install python dependencies
+COPY requirements.txt ./
+RUN pip3 install --no-cache-dir -r requirements.txt && pip3 cache purge
+
+# copy files
+COPY cloudlanguagetools_chatbot ./
+COPY telegram_app.py ./
+
+# start
+ENTRYPOINT ["python3 telegram_app.py"]
