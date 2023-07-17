@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 import cloudlanguagetools.servicemanager
 import cloudlanguagetools.chatmodel
+import cloudlanguagetools.options
 
 clt_manager = cloudlanguagetools.servicemanager.ServiceManager()
 clt_manager.configure_default()
@@ -41,8 +42,8 @@ def received_message_lambda(bot, chat_id):
 
 def received_audio_lambda(bot, chat_id):
     def send_audio(audio_tempfile: tempfile.NamedTemporaryFile):
-        bod_send_message_sync = async_to_sync(bot.send_message)
-        bod_send_message_sync(chat_id=chat_id, text=f'received audio')
+        bod_send_message_sync = async_to_sync(bot.send_voice)
+        bod_send_message_sync(chat_id=chat_id, voice=audio_tempfile.name)
     return send_audio
 
 def received_error_lambda(bot, chat_id):
@@ -55,7 +56,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, 
         text="Please enter a sentence in your target language (language that you are learning)")
     context.user_data.clear()
-    context.user_data['chat_model'] = cloudlanguagetools.chatmodel.ChatModel(clt_manager)
+    context.user_data['chat_model'] = cloudlanguagetools.chatmodel.ChatModel(clt_manager, 
+        audio_format=cloudlanguagetools.options.AudioFormat.ogg_opus)
     # the chatmodel needs to know which functions to call when it has a message to send
     context.user_data['chat_model'].set_send_message_callback(
         received_message_lambda(context.bot, update.effective_chat.id),
