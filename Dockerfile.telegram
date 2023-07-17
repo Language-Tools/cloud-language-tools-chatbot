@@ -10,4 +10,4 @@ COPY cloudlanguagetools_chatbot ./
 COPY telegram_app.py ./
 
 # start
-ENTRYPOINT ["python3 telegram_app.py"]
+ENTRYPOINT ["python telegram_app.py"]
