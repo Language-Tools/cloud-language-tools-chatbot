@@ -209,25 +209,25 @@ class TestChatModel(unittest.TestCase):
         from cloudlanguagetools_chatbot.chatmodel import InputType
 
         self.assertEquals(self.categorize_input_type_sync('呢條路係行返屋企嘅路', 
-                                                   'Is there another chinese character which means road?'),
+                                                   'Is there another chinese character which means road?').input_type,
                                                    InputType.question_or_command)
 
         self.assertEquals(self.categorize_input_type_sync('呢條路係行返屋企嘅路', 
-                                                   '黑社會'),
+                                                   '黑社會').input_type,
                                                    InputType.new_sentence)
 
         self.assertEquals(self.categorize_input_type_sync('黑社會', 
-                                                   'When do we use this ?'),
+                                                   'When do we use this ?').input_type,
                                                    InputType.question_or_command)
 
         self.assertEquals(self.categorize_input_type_sync('黑社會', 
-                                                   'pronounce using amazon'),
+                                                   'pronounce using amazon').input_type,
                                                    InputType.question_or_command)
 
         self.assertEquals(self.categorize_input_type_sync('黑社會', 
-        'instructions: when I give you a sentence in cantonese, pronounce it using Azure service and female voice, then translate it into english, and break down the cantonese sentence into words'),
+        'instructions: when I give you a sentence in cantonese, pronounce it using Azure service and female voice, then translate it into english, and break down the cantonese sentence into words').input_type,
                                                    InputType.instructions)
 
         self.assertEquals(self.categorize_input_type_sync('黑社會', 
-        'instruction: translate from french to english'),
+        'instruction: translate from french to english').input_type,
                                                    InputType.instructions)                                                   
