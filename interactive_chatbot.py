@@ -7,6 +7,7 @@ import pasimple
 import wave
 import readline
 import pprint
+import asyncio
 logger = logging.getLogger(__name__)
 
 import cloudlanguagetools.servicemanager
@@ -20,13 +21,13 @@ class InteractiveChatbot():
         self.chat_model = cloudlanguagetools_chatbot.chatmodel.ChatModel(self.manager)
         self.chat_model.set_send_message_callback(self.received_message, self.received_audio, self.received_error)
 
-    def received_message(self, message: str):
+    async def received_message(self, message: str):
         logger.info(f'received message: {message}')
 
-    def received_error(self, error: str):
+    async def received_error(self, error: str):
         logger.error(error)
 
-    def received_audio(self, audio_tempfile: tempfile.NamedTemporaryFile):
+    async def received_audio(self, audio_tempfile: tempfile.NamedTemporaryFile):
         logger.info(f'playing audio')
         sound = pydub.AudioSegment.from_mp3(audio_tempfile.name)
         wav_tempfile = tempfile.NamedTemporaryFile(prefix='clt_interactivechatbot', suffix='.wav')
@@ -44,7 +45,7 @@ class InteractiveChatbot():
             pa.write(audio_data)
             pa.drain()        
 
-    def run(self):
+    async def run(self):
         while True:
             user_input = input("Enter a message: ")
             if user_input.startswith('instructions:'):
@@ -54,7 +55,7 @@ class InteractiveChatbot():
             elif user_input.startswith('history:'):
                 logger.info(f'history:\n {pprint.pformat(self.chat_model.get_last_call_messages())}')
             else:
-                self.chat_model.process_message(user_input)
+                await self.chat_model.process_message(user_input)
                 logger.info(self.chat_model.status())
 
 
@@ -68,4 +69,4 @@ if __name__ == '__main__':
                         level=logging.INFO)    
 
     chatbot = InteractiveChatbot()
-    chatbot.run()
+    asyncio.run(chatbot.run())
