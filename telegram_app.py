@@ -13,7 +13,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 import cloudlanguagetools.servicemanager
-import cloudlanguagetools.chatmodel
+import cloudlanguagetools_chatbot.chatmodel
 import cloudlanguagetools.options
 
 clt_manager = cloudlanguagetools.servicemanager.ServiceManager()
@@ -56,7 +56,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, 
         text="Please enter a sentence in your target language (language that you are learning)")
     context.user_data.clear()
-    context.user_data['chat_model'] = cloudlanguagetools.chatmodel.ChatModel(clt_manager, 
+    context.user_data['chat_model'] = cloudlanguagetools_chatbot.chatmodel.ChatModel(clt_manager, 
         audio_format=cloudlanguagetools.options.AudioFormat.ogg_opus)
     # the chatmodel needs to know which functions to call when it has a message to send
     context.user_data['chat_model'].set_send_message_callback(
