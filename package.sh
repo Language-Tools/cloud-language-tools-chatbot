@@ -10,5 +10,5 @@ git push origin ${GIT_TAG}
 
 # docker build
 export DOCKER_BUILDKIT=1
-docker build -t lucwastiaux/clt-chatbot:${VERSION_NUMBER} -f Dockerfile.telegram .
-docker push lucwastiaux/clt-chatbot:${VERSION_NUMBER}
+docker build -t lucwastiaux/clt-chatbot-telegram:${VERSION_NUMBER} -f Dockerfile.telegram .
+docker push lucwastiaux/clt-chatbot-telegram:${VERSION_NUMBER}
