@@ -4,6 +4,7 @@ import json
 import pprint
 import openai
 import time
+from strenum import StrEnum
 from asgiref.sync import  sync_to_async
 import cloudlanguagetools.chatapi
 import cloudlanguagetools.options
@@ -11,8 +12,12 @@ from cloudlanguagetools_chatbot import prompts
 
 logger = logging.getLogger(__name__)
 
+class InputType(StrEnum):
+    new_sentence = 'NEW_SENTENCE',
+    question_or_instruction = 'QUESTION_OR_INSTRUCTION'
+
 class IsNewSentenceQuery(pydantic.BaseModel):
-    is_new_sentence: bool = pydantic.Field(description=prompts.DESCRIPTION_FLD_IS_NEW_QUESTION)
+    input_type: InputType = pydantic.Field(description=prompts.DESCRIPTION_FLD_IS_NEW_QUESTION)
 
 
 """
@@ -127,11 +132,10 @@ class ChatModel():
         function_name = message['function_call']['name']
         assert function_name == new_sentence_function_name
         arguments = json.loads(message["function_call"]["arguments"])
-        is_new_sentence_arg = IsNewSentenceQuery(**arguments)
+        input_type_result = IsNewSentenceQuery(**arguments)
         
-        logger.info(f'input sentence: [{input_sentence}] is new sentence: {is_new_sentence_arg.is_new_sentence}')
-        return is_new_sentence_arg.is_new_sentence
-
+        logger.info(f'input sentence: [{input_sentence}] input type: {input_type_result}')
+        return input_type_result.input_type == InputType.new_sentence
 
 
     async def process_message(self, input_message):
