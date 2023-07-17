@@ -1,5 +1,5 @@
-FROM ubuntu:20.04
-RUN apt-get update -y && apt-get install -y libasound2 python3-pip git gnupg build-essential wget
+FROM python:3.9-slim-bullseye
+RUN apt-get update -y && apt-get install -y libasound2 python3-pip build-essential wget
 
 # install python dependencies
 RUN pip3 install --upgrade pip
