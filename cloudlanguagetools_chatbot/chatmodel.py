@@ -4,6 +4,7 @@ import json
 import pprint
 import openai
 import time
+from asgiref.sync import  sync_to_async
 import cloudlanguagetools.chatapi
 import cloudlanguagetools.options
 
@@ -49,14 +50,14 @@ class ChatModel():
         self.send_audio_fn = send_audio_fn
         self.send_error_fn = send_error_fn
 
-    def send_message(self, message):
-        self.send_message_fn(message)
+    async def send_message(self, message):
+        await self.send_message_fn(message)
 
-    def send_audio(self, audio_tempfile):
-        self.send_audio_fn(audio_tempfile)
+    async def send_audio(self, audio_tempfile):
+        await self.send_audio_fn(audio_tempfile)
 
-    def send_error(self, error: str):
-        self.send_error_fn(error)        
+    async def send_error(self, error: str):
+        await self.send_error_fn(error)
 
     def get_system_messages(self):
         # do we have any instructions ?
@@ -70,7 +71,7 @@ class ChatModel():
 
         return messages
 
-    def call_openai(self):
+    async def call_openai(self):
 
         messages = self.get_system_messages()
         messages.extend(self.message_history)
@@ -79,7 +80,7 @@ class ChatModel():
 
         logger.debug(f"sending messages to openai: {pprint.pformat(messages)}")
 
-        response = openai.ChatCompletion.create(
+        response = await openai.ChatCompletion.acreate(
             model="gpt-3.5-turbo-0613",
             # require larger context
             # model="gpt-3.5-turbo-16k",
@@ -99,7 +100,7 @@ class ChatModel():
     def status(self):
         return f'total_tokens: {self.total_tokens}, latest_token_usage: {self.latest_token_usage} (prompt: {self.latest_prompt_usage} completion: {self.latest_completion_usage})'
 
-    def is_new_sentence(self, input_sentence) -> bool:
+    async def is_new_sentence(self, input_sentence) -> bool:
         """return true if input is a new sentence. we'll use this to clear history"""
 
         messages = [
@@ -110,7 +111,7 @@ class ChatModel():
 
         new_sentence_function_name = 'is_new_sentence'
 
-        response = openai.ChatCompletion.create(
+        response = await openai.ChatCompletion.acreate(
             model="gpt-3.5-turbo-0613",
             messages=messages,
             functions=[{
@@ -133,11 +134,13 @@ class ChatModel():
 
 
 
-    def process_message(self, input_message):
+    async def process_message(self, input_message):
     
         # do we need to clear history ?
-        if len(self.message_history) > 0 and self.is_new_sentence(input_message):
-            self.message_history = []
+        if len(self.message_history) > 0:
+            new_sentence = await self.is_new_sentence(input_message)
+            if new_sentence:
+                self.message_history = []
 
         max_calls = 10
         continue_processing = True
@@ -152,7 +155,7 @@ class ChatModel():
         try:
             while continue_processing and max_calls > 0:
                 max_calls -= 1
-                response = self.call_openai()
+                response = await self.call_openai()
                 logger.debug(pprint.pformat(response))
                 message = response['choices'][0]['message']
                 message_content = message.get('content', None)
@@ -167,7 +170,7 @@ class ChatModel():
                     # check whether we've called that function with exact same arguments before
                     if arguments_str not in function_call_cache.get(function_name, {}):
                         # haven't called it with these arguments before
-                        function_call_result, sent_message_to_user = self.process_function_call(function_name, arguments)
+                        function_call_result, sent_message_to_user = await self.process_function_call(function_name, arguments)
                         at_least_one_message_to_user = at_least_one_message_to_user or sent_message_to_user
                         self.message_history.append({"role": "function", "name": function_name, "content": function_call_result})
                         # cache function call results
@@ -189,39 +192,44 @@ class ChatModel():
                     self.message_history.append({"role": "assistant", "content": message_content})
         except Exception as e:
             logger.exception(f'error processing function call')
-            self.send_error(str(e))                
+            await self.send_error(str(e))                
 
         # clear history after processing one input sentence
         # self.message_history = []
         self.last_input_sentence = input_message
 
-    def process_function_call(self, function_name, arguments):
+    async def process_function_call(self, function_name, arguments):
         # by default, don't send output to user
         send_message_to_user = False
         if function_name == self.FUNCTION_NAME_PRONOUNCE:
             query = cloudlanguagetools.chatapi.AudioQuery(**arguments)
-            audio_tempfile = self.chatapi.audio(query, self.audio_format)
+            async_audio = sync_to_async(self.chatapi.audio)
+            audio_tempfile = await async_audio(query, self.audio_format)
             result = query.input_text
-            self.send_audio(audio_tempfile)
+            await self.send_audio(audio_tempfile)
             send_message_to_user = True
         else:
             # text-based functions
             try:
                 if function_name == self.FUNCTION_NAME_TRANSLATE:
                     translate_query = cloudlanguagetools.chatapi.TranslateQuery(**arguments)
-                    result = self.chatapi.translate(translate_query)
+                    async_translate = sync_to_async(self.chatapi.translate)
+                    result = await async_translate(translate_query)
                     send_message_to_user = True
                 elif function_name == self.FUNCTION_NAME_TRANSLITERATE:
                     query = cloudlanguagetools.chatapi.TransliterateQuery(**arguments)
-                    result = self.chatapi.transliterate(query)
+                    async_transliterate = sync_to_async(self.chatapi.transliterate)
+                    result = await async_transliterate(query)
                     send_message_to_user = True
                 elif function_name == self.FUNCTION_NAME_DICTIONARY_LOOKUP:
                     query = cloudlanguagetools.chatapi.DictionaryLookup(**arguments)
-                    result = self.chatapi.dictionary_lookup(query)
+                    async_dictionary_lookup = sync_to_async(self.chatapi.dictionary_lookup)
+                    result = await async_dictionary_lookup(query)
                     send_message_to_user = True
                 elif function_name == self.FUNCTION_NAME_BREAKDOWN:
                     query = cloudlanguagetools.chatapi.BreakdownQuery(**arguments)
-                    result = self.chatapi.breakdown(query)
+                    async_breakdown = sync_to_async(self.chatapi.breakdown)
+                    result = await async_breakdown(query)
                     send_message_to_user = True
                 else:
                     # report unknown function
@@ -230,7 +238,7 @@ class ChatModel():
                 result = str(e)
             logger.info(f'function: {function_name} result: {result}')
             if send_message_to_user:
-                self.send_message(result)
+                await self.send_message(result)
         # need to echo the result back to chatgpt
         return result, send_message_to_user    
 

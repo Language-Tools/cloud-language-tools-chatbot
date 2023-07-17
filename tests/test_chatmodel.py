@@ -6,6 +6,7 @@ import pytest
 import json
 import pprint
 import audio_utils
+from asgiref.sync import async_to_sync
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -34,14 +35,15 @@ class TestChatModel(unittest.TestCase):
         logger.info('creating chat model')
         self.chat_model = cloudlanguagetools_chatbot.chatmodel.ChatModel(self.manager)
         self.chat_model.set_send_message_callback(self.send_message_fn, self.send_audio_fn, self.send_error_fn)
+        self.process_message_sync = async_to_sync(self.chat_model.process_message)
 
-    def send_error_fn(self, message):
+    async def send_error_fn(self, message):
         self.error_list.append(message)
 
-    def send_message_fn(self, message):
+    async def send_message_fn(self, message):
         self.message_list.append(message)
     
-    def send_audio_fn(self, audio_tempfile):
+    async def send_audio_fn(self, audio_tempfile):
         self.audio_list.append(audio_tempfile)
     
     def verify_single_audio_message(self, expected_audio_message, recognition_language):
@@ -60,7 +62,7 @@ class TestChatModel(unittest.TestCase):
         instruction = "When given a sentence in French, translate it to English"
         self.chat_model.set_instruction(instruction)
 
-        self.chat_model.process_message("Je ne suis pas intéressé.")
+        self.process_message_sync("Je ne suis pas intéressé.")
         self.assertEquals(self.message_list, ["I'm not interested."])
 
 
@@ -70,7 +72,7 @@ class TestChatModel(unittest.TestCase):
         instruction = "When given a sentence in Chinese, translate it to English, then transliterate the Chinese"
         self.chat_model.set_instruction(instruction)
 
-        self.chat_model.process_message("成本很低")
+        self.process_message_sync("成本很低")
         self.assertEquals(self.message_list, ["The cost is low.", 'chéngběn hěn dī'])
 
 
@@ -80,7 +82,7 @@ class TestChatModel(unittest.TestCase):
         instruction = "When given a sentence in Chinese, translate it to English, then breakdown the chinese sentence"
         self.chat_model.set_instruction(instruction)
 
-        self.chat_model.process_message("成本很低")
+        self.process_message_sync("成本很低")
         self.assertEquals(self.message_list, ["The cost is low.", """成本: chéngběn, (manufacturing, production etc) costs
 很: hěn, very much
 低: dī, lower (one's head)"""])
@@ -92,7 +94,7 @@ class TestChatModel(unittest.TestCase):
         instruction = "When given a sentence in Chinese, translate it to English, and pronounce the chinese sentence."
         self.chat_model.set_instruction(instruction)
 
-        self.chat_model.process_message("成本很低")
+        self.process_message_sync("成本很低")
         self.assertEquals(self.message_list, ["The cost is low."])
 
         self.assertEquals(len(self.audio_list), 1)  
@@ -103,7 +105,7 @@ class TestChatModel(unittest.TestCase):
         # pytest --log-cli-level=DEBUG tests/test_chatmodel.py -k test_cantonese_audio
         # pytest --log-cli-level=INFO tests/test_chatmodel.py -k test_cantonese_audio
 
-        self.chat_model.process_message('pronounce "天氣預報" in cantonese')
+        self.process_message_sync('pronounce "天氣預報" in cantonese')
         self.verify_single_audio_message('天氣預報', 'zh-HK')
 
 
@@ -113,7 +115,7 @@ class TestChatModel(unittest.TestCase):
         self.chat_model.set_instruction(instructions)
 
         # first input sentence
-        self.chat_model.process_message('呢條路係行返屋企嘅路')
+        self.process_message_sync('呢條路係行返屋企嘅路')
         self.verify_single_audio_message('呢條路係行返屋企嘅路', 'zh-HK')
         self.verify_messages(['This road is the way home',
 """呢: nèi, this
@@ -125,7 +127,7 @@ class TestChatModel(unittest.TestCase):
 路: lou, road"""])
 
         # second input sentence
-        self.chat_model.process_message('我最頂唔順嗰樣嘢')
+        self.process_message_sync('我最頂唔順嗰樣嘢')
         self.verify_single_audio_message('我最頂唔順果樣嘢', 'zh-HK')
         self.verify_messages(["I can't stand that kind of stuff the most",
 """我: ngǒ, I
@@ -137,7 +139,7 @@ class TestChatModel(unittest.TestCase):
 嘢: jě, stuff"""])
 
         # third input sentence
-        self.chat_model.process_message('黑社會')
+        self.process_message_sync('黑社會')
         self.verify_single_audio_message('黑社會', 'zh-HK')
         self.verify_messages(["underworld",
             """黑社會: hāksěwúi, underworld"""])        
@@ -150,12 +152,12 @@ class TestChatModel(unittest.TestCase):
         self.chat_model.set_instruction(instructions)
 
         # send input sentence
-        self.chat_model.process_message('黑社會')
+        self.process_message_sync('黑社會')
         self.verify_single_audio_message('黑社會', 'zh-HK')
         self.verify_messages(["underworld",
             """黑社會: hāksěwúi, underworld"""])        
 
-        self.chat_model.process_message('when do we use this ?')
+        self.process_message_sync('when do we use this ?')
         # we should have an explanation from chatgpt
         self.assertEquals(len(self.message_list), 1)
         self.assertIn('crime', self.message_list[0])
@@ -168,7 +170,7 @@ class TestChatModel(unittest.TestCase):
         self.chat_model.set_instruction(instructions)
 
         # first input sentence
-        self.chat_model.process_message('呢條路係行返屋企嘅路')
+        self.process_message_sync('呢條路係行返屋企嘅路')
         self.verify_single_audio_message('呢條路係行返屋企嘅路', 'zh-HK')
         self.verify_messages(['This road is the way home',
 """呢: nèi, this
@@ -179,7 +181,7 @@ class TestChatModel(unittest.TestCase):
 嘅: gê, target
 路: lou, road"""])
 
-        self.chat_model.process_message('Is there another chinese character which means road?')
+        self.process_message_sync('Is there another chinese character which means road?')
         # we should have an explanation from chatgpt
         self.assertEquals(len(self.message_list), 1)
         self.assertIn('路', self.message_list[0])
