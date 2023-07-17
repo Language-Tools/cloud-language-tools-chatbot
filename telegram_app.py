@@ -46,10 +46,10 @@ def received_audio_lambda(bot, chat_id):
         await bot.send_voice(chat_id=chat_id, voice=audio_tempfile.name)
     return send_audio
 
-def received_error_lambda(bot, chat_id):
-    async def send_error(message):
-        await bot.send_message(chat_id=chat_id, text=f'error: {message}')
-    return send_error
+def received_status_lambda(bot, chat_id):
+    async def send_status(message):
+        await bot.send_message(chat_id=chat_id, text=f'_{message}_')
+    return send_status
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, 
@@ -61,7 +61,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['chat_model'].set_send_message_callback(
         received_message_lambda(context.bot, update.effective_chat.id),
         received_audio_lambda(context.bot, update.effective_chat.id),
-        received_error_lambda(context.bot, update.effective_chat.id))
+        received_status_lambda(context.bot, update.effective_chat.id))
 
 async def handle_set_instructions(update: Update, context: ContextTypes.DEFAULT_TYPE):
     instructions = ' '.join(context.args)
