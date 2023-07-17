@@ -1,6 +1,8 @@
 
 SYSTEM_MSG_ASSISTANT = "You are a helpful assistant specialized in translation and language learning."
 
+DEFAULT_INSTRUCTIONS = "When given a sentence in a foreign language, translate it to English, then pronounce the foreign language sentence"
+
 DESCRIPTION_FN_IS_NEW_QUESTION = """Determine whether the last user message is a new input sentence unrelated to the previous one,
 or a question regarding the meaning, grammar, vocabulary of the previous sentence, or an instruction
 to explain, translate, transliterate, pronounce, lookup or break down the previous sentence,

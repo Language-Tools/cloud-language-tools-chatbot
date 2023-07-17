@@ -39,7 +39,7 @@ class ChatModel():
     def __init__(self, manager, audio_format=cloudlanguagetools.options.AudioFormat.mp3):
         self.manager = manager
         self.chatapi = cloudlanguagetools.chatapi.ChatAPI(self.manager)
-        self.instruction = None
+        self.instruction = prompts.DEFAULT_INSTRUCTIONS
         self.message_history = []
         self.last_call_messages = None
         self.last_input_sentence = None
