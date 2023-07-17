@@ -1,5 +1,4 @@
 pytest
-pytest-asyncio
 python-magic
 pydub
 pasimple

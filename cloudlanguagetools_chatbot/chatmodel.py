@@ -185,7 +185,7 @@ class ChatModel():
                     continue_processing = False
                     if at_least_one_message_to_user == False:
                         # or nothing has been shown to the user yet, so we should show the final message. maybe chatgpt is trying to explain something
-                        self.send_message(message['content'])
+                        await self.send_message(message['content'])
                 
                 # if there was a message, append it to the history
                 if message_content != None:
