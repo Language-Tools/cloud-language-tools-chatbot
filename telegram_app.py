@@ -75,6 +75,20 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     input_text = update.message.text
     await context.user_data['chat_model'].process_message(input_text)
 
+async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # tell user we are typing
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=telegram.constants.ChatAction.TYPING)
+
+    # download file
+    file_id = update.message.voice.file_id
+    voice_note_file = await context.bot.getFile(file_id)
+    voice_tempfile = tempfile.NamedTemporaryFile(prefix='telegram_voice_', suffix='.ogg')
+    await voice_note_file.download_to_drive(voice_tempfile.name)
+
+    # recognize text
+    text = await context.user_data['chat_model'].process_audio(voice_tempfile)
+
+
 if __name__ == '__main__':
     # set default basic logging with info level
 
@@ -85,8 +99,10 @@ if __name__ == '__main__':
     start_handler = CommandHandler("start", start)
     set_instructions_handler = CommandHandler("set_instructions", handle_set_instructions)
     message_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), handle_user_message)
+    voice_handler = MessageHandler(filters.VOICE & (~filters.COMMAND), handle_voice)
 
     application.add_handler(start_handler)
     application.add_handler(set_instructions_handler)
     application.add_handler(message_handler)
+    application.add_handler(voice_handler)
     application.run_polling()

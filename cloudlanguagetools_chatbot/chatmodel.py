@@ -3,6 +3,7 @@ import logging
 import json
 import pprint
 import openai
+import tempfile
 import time
 from strenum import StrEnum
 from asgiref.sync import  sync_to_async
@@ -19,6 +20,8 @@ class InputType(StrEnum):
 class IsNewSentenceQuery(pydantic.BaseModel):
     input_type: InputType = pydantic.Field(description=prompts.DESCRIPTION_FLD_IS_NEW_QUESTION)
 
+
+REQUEST_TIMEOUT=10
 
 """
 holds an instance of a conversation
@@ -92,7 +95,8 @@ class ChatModel():
             messages=messages,
             functions=self.get_openai_functions(),
             function_call= "auto",
-            temperature=0.0
+            temperature=0.0,
+            request_timeout=REQUEST_TIMEOUT
         )
 
         self.latest_token_usage = response['usage']['total_tokens']
@@ -125,7 +129,8 @@ class ChatModel():
                 'parameters': IsNewSentenceQuery.model_json_schema(),
             }],
             function_call={'name': new_sentence_function_name},
-            temperature=0.0
+            temperature=0.0,
+            request_timeout=REQUEST_TIMEOUT
         )
 
         message = response['choices'][0]['message']
@@ -137,6 +142,11 @@ class ChatModel():
         logger.info(f'input sentence: [{input_sentence}] input type: {input_type_result}')
         return input_type_result.input_type == InputType.new_sentence
 
+    async def process_audio(self, audio_tempfile: tempfile.NamedTemporaryFile):
+        async_recognize_audio = sync_to_async(self.chatapi.recognize_audio)
+        text = await async_recognize_audio(audio_tempfile, self.audio_format)
+        await self.send_message(text)
+        await self.process_message(text)
 
     async def process_message(self, input_message):
     
