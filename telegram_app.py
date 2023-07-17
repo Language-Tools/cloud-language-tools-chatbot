@@ -35,7 +35,7 @@ from telegram.ext import filters, MessageHandler, ApplicationBuilder, CommandHan
 TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
 
 def received_message_lambda(bot, chat_id):
-    def send_message(message):
+    def send_message(message): 
         bod_send_message_sync = async_to_sync(bot.send_message)
         bod_send_message_sync(chat_id=chat_id, text=message)
     return send_message
