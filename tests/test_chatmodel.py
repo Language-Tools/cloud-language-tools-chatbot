@@ -36,6 +36,7 @@ class TestChatModel(unittest.TestCase):
         self.chat_model = cloudlanguagetools_chatbot.chatmodel.ChatModel(self.manager)
         self.chat_model.set_send_message_callback(self.send_message_fn, self.send_audio_fn, self.send_error_fn)
         self.process_message_sync = async_to_sync(self.chat_model.process_message)
+        self.is_new_sentence_sync = async_to_sync(self.chat_model.is_new_sentence)
 
     async def send_error_fn(self, message):
         self.error_list.append(message)
@@ -185,3 +186,31 @@ class TestChatModel(unittest.TestCase):
         # we should have an explanation from chatgpt
         self.assertEquals(len(self.message_list), 1)
         self.assertIn('路', self.message_list[0])
+
+    def test_cantonese_additional_questions_3(self):
+        # pytest --log-cli-level=INFO tests/test_chatmodel.py -k test_cantonese_additional_questions_3
+        # pytest --log-cli-level=DEBUG tests/test_chatmodel.py -k test_cantonese_additional_questions_3
+
+        """follow instructions, but then ask an additional question regarding a sentence"""
+        instructions = 'when I give you a sentence in cantonese, pronounce it using Azure service, then translate it into english, and break down the cantonese sentence into words'
+        self.chat_model.set_instruction(instructions)
+
+        # send input sentence
+        self.process_message_sync('黑社會')
+        self.verify_single_audio_message('黑社會', 'zh-HK')
+        self.verify_messages(["underworld",
+            """黑社會: hāksěwúi, underworld"""])        
+
+        self.process_message_sync('pronounce using amazon service')
+        # print
+        self.verify_single_audio_message('黑社會', 'zh-HK')
+
+    def test_is_new_sentence(self):
+        # pytest --log-cli-level=INFO tests/test_chatmodel.py -k test_is_new_sentence
+        # pytest --log-cli-level=DEBUG tests/test_chatmodel.py -k test_is_new_sentence
+
+        self.assertFalse(self.is_new_sentence_sync('呢條路係行返屋企嘅路', 
+                                                   'Is there another chinese character which means road?'))
+
+        self.assertTrue(self.is_new_sentence_sync('呢條路係行返屋企嘅路', 
+                                                   '黑社會'))

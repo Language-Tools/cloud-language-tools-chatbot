@@ -7,12 +7,12 @@ import time
 from asgiref.sync import  sync_to_async
 import cloudlanguagetools.chatapi
 import cloudlanguagetools.options
+from cloudlanguagetools_chatbot import prompts
 
 logger = logging.getLogger(__name__)
 
 class IsNewSentenceQuery(pydantic.BaseModel):
-    is_new_sentence: bool = pydantic.Field(description="true if the last user message is a new input sentence for translation, transliteration, pronuncation or dictionary lookup," 
-                                           "false if it is a question regarding the meaning, grammar, or vocabulary of the previous sentence")
+    is_new_sentence: bool = pydantic.Field(description=prompts.DESCRIPTION_FLD_IS_NEW_QUESTION)
 
 
 """
@@ -66,7 +66,7 @@ class ChatModel():
             instruction_message_list = [{"role": "system", "content": self.instruction}]
 
         messages = [
-            {"role": "system", "content": "You are a helpful assistant specialized in translation and language learning."}
+            {"role": "system", "content": prompts.SYSTEM_MSG_ASSISTANT},
         ] + instruction_message_list
 
         return messages
@@ -100,12 +100,12 @@ class ChatModel():
     def status(self):
         return f'total_tokens: {self.total_tokens}, latest_token_usage: {self.latest_token_usage} (prompt: {self.latest_prompt_usage} completion: {self.latest_completion_usage})'
 
-    async def is_new_sentence(self, input_sentence) -> bool:
+    async def is_new_sentence(self, last_input_sentence, input_sentence) -> bool:
         """return true if input is a new sentence. we'll use this to clear history"""
 
         messages = [
-            {"role": "system", "content": "You are a helpful assistant specialized in translation and language learning."},
-            {"role": "user", "content": self.last_input_sentence},
+            {"role": "system", "content": prompts.SYSTEM_MSG_ASSISTANT},
+            {"role": "user", "content": last_input_sentence},
             {"role": "user", "content": input_sentence}
         ]
 
@@ -116,7 +116,7 @@ class ChatModel():
             messages=messages,
             functions=[{
                 'name': new_sentence_function_name,
-                'description': "Determine whether the last user message is a new sentence or a question regarding the meaning, grammar, or vocabulary of the previous sentence",
+                'description': prompts.DESCRIPTION_FN_IS_NEW_QUESTION,
                 'parameters': IsNewSentenceQuery.model_json_schema(),
             }],
             function_call={'name': new_sentence_function_name},
@@ -138,9 +138,10 @@ class ChatModel():
     
         # do we need to clear history ?
         if len(self.message_history) > 0:
-            new_sentence = await self.is_new_sentence(input_message)
+            new_sentence = await self.is_new_sentence(self.last_input_sentence, input_message)
             if new_sentence:
                 self.message_history = []
+                self.last_input_sentence = input_message
 
         max_calls = 10
         continue_processing = True
@@ -194,9 +195,6 @@ class ChatModel():
             logger.exception(f'error processing function call')
             await self.send_error(str(e))                
 
-        # clear history after processing one input sentence
-        # self.message_history = []
-        self.last_input_sentence = input_message
 
     async def process_function_call(self, function_name, arguments):
         # by default, don't send output to user
