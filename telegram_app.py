@@ -28,6 +28,7 @@ import telegram
 
 from telegram import Update
 from telegram.ext import filters, MessageHandler, ApplicationBuilder, CommandHandler, ContextTypes
+import telegram.constants
 
 
 TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
@@ -41,7 +42,7 @@ def received_audio_lambda(bot, chat_id):
     async def send_audio(audio_tempfile: tempfile.NamedTemporaryFile):
         # https://docs.python-telegram-bot.org/en/stable/telegram.bot.html#telegram.Bot.send_voice
         # tell using we are sending a voice note
-        await bot.send_chat_action(chat_id=chat_id, action=telegram.ChatAction.UPLOAD_VOICE)
+        await bot.send_chat_action(chat_id=chat_id, action=telegram.constants.ChatAction.UPLOAD_VOICE)
         await bot.send_voice(chat_id=chat_id, voice=audio_tempfile.name)
     return send_audio
 
@@ -69,7 +70,7 @@ async def handle_set_instructions(update: Update, context: ContextTypes.DEFAULT_
 
 async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # tell user we are typing
-    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=telegram.ChatAction.TYPING)
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=telegram.constants.ChatAction.TYPING)
 
     input_text = update.message.text
     await context.user_data['chat_model'].process_message(input_text)
