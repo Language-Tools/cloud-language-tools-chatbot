@@ -1,9 +1,7 @@
 import logging
 import os
 import pprint
-import json
 import tempfile
-from asgiref.sync import async_to_sync, sync_to_async
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -35,21 +33,18 @@ from telegram.ext import filters, MessageHandler, ApplicationBuilder, CommandHan
 TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
 
 def received_message_lambda(bot, chat_id):
-    def send_message(message): 
-        bod_send_message_sync = async_to_sync(bot.send_message)
-        bod_send_message_sync(chat_id=chat_id, text=message)
+    async def send_message(message): 
+        await bot.send_message(chat_id=chat_id, text=message)
     return send_message
 
 def received_audio_lambda(bot, chat_id):
-    def send_audio(audio_tempfile: tempfile.NamedTemporaryFile):
-        bod_send_message_sync = async_to_sync(bot.send_voice)
-        bod_send_message_sync(chat_id=chat_id, voice=audio_tempfile.name)
+    async def send_audio(audio_tempfile: tempfile.NamedTemporaryFile):
+        await bot.send_voice(chat_id=chat_id, voice=audio_tempfile.name)
     return send_audio
 
 def received_error_lambda(bot, chat_id):
-    def send_error(message):
-        bod_send_message_sync = async_to_sync(bot.send_message)
-        bod_send_message_sync(chat_id=chat_id, text=f'error: {message}')
+    async def send_error(message):
+        await bot.send_message(chat_id=chat_id, text=f'error: {message}')
     return send_error
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -71,9 +66,7 @@ async def handle_set_instructions(update: Update, context: ContextTypes.DEFAULT_
 
 async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     input_text = update.message.text
-    process_message_async = sync_to_async(context.user_data['chat_model'].process_message)
-    # context.user_data['chat_model'].process_message(input_text)
-    await process_message_async(input_text)
+    await context.user_data['chat_model'].process_message(input_text)
 
 if __name__ == '__main__':
     # set default basic logging with info level
