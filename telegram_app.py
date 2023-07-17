@@ -53,24 +53,25 @@ def received_status_lambda(bot, chat_id):
         await bot.send_message(chat_id=chat_id, text=f'_{escaped_text}_', parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
     return send_status
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.effective_chat.id, 
-        text="Please enter a sentence in your target language (language that you are learning)")
-    context.user_data.clear()
-    context.user_data['chat_model'] = cloudlanguagetools_chatbot.chatmodel.ChatModel(clt_manager, 
-        audio_format=cloudlanguagetools.options.AudioFormat.ogg_opus)
-    # the chatmodel needs to know which functions to call when it has a message to send
-    context.user_data['chat_model'].set_send_message_callback(
-        received_message_lambda(context.bot, update.effective_chat.id),
-        received_audio_lambda(context.bot, update.effective_chat.id),
-        received_status_lambda(context.bot, update.effective_chat.id))
+async def ensure_chat_model_initialized(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if 'chat_model' not in context.user_data:
+        context.user_data['chat_model'] = cloudlanguagetools_chatbot.chatmodel.ChatModel(clt_manager, 
+            audio_format=cloudlanguagetools.options.AudioFormat.ogg_opus)
+        # the chatmodel needs to know which functions to call when it has a message to send
+        context.user_data['chat_model'].set_send_message_callback(
+            received_message_lambda(context.bot, update.effective_chat.id),
+            received_audio_lambda(context.bot, update.effective_chat.id),
+            received_status_lambda(context.bot, update.effective_chat.id))
+        welcome_message = f"Welcome to VocabAi chatbot, my instructions are: {context.user_data['chat_model'].get_instruction()}"
+        escaped_text = telegram.helpers.escape_markdown(welcome_message, version=2)
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f'_{escaped_text}_', parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
-async def handle_set_instructions(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    instructions = ' '.join(context.args)
-    context.user_data['chat_model'].set_instruction(instructions)
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"My instructions are now: {instructions}")
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await ensure_chat_model_initialized(update, context)
 
 async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await ensure_chat_model_initialized(update, context)
+
     # tell user we are typing
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=telegram.constants.ChatAction.TYPING)
 
@@ -78,6 +79,8 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     await context.user_data['chat_model'].process_message(input_text)
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await ensure_chat_model_initialized(update, context)
+
     # tell user we are typing
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=telegram.constants.ChatAction.TYPING)
 
@@ -99,12 +102,10 @@ if __name__ == '__main__':
     application = ApplicationBuilder().token(TOKEN).build()
     
     start_handler = CommandHandler("start", start)
-    set_instructions_handler = CommandHandler("set_instructions", handle_set_instructions)
     message_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), handle_user_message)
     voice_handler = MessageHandler(filters.VOICE & (~filters.COMMAND), handle_voice)
 
     application.add_handler(start_handler)
-    application.add_handler(set_instructions_handler)
     application.add_handler(message_handler)
     application.add_handler(voice_handler)
     application.run_polling()
