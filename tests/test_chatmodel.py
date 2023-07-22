@@ -94,7 +94,7 @@ class TestChatModel(unittest.TestCase):
         self.process_message_sync(instruction)
 
         self.process_message_sync("成本很低")
-        self.assertEquals(self.message_list, ["The cost is low."])
+        self.assertEquals(self.message_list, ["The cost is low"])
 
         # sometimes we get 2 sound files, that's OK
         # self.assertEquals(len(self.audio_list), 1)  
@@ -141,7 +141,7 @@ class TestChatModel(unittest.TestCase):
         # third input sentence
         self.process_message_sync('黑社會')
         self.verify_single_audio_message('黑社會', 'zh-HK')
-        self.verify_messages(["underworld",
+        self.verify_messages(["criminal underworld",
             """黑社會: hāksěwúi, underworld"""])        
 
     def test_cantonese_additional_questions_1(self):
@@ -154,7 +154,7 @@ class TestChatModel(unittest.TestCase):
         # send input sentence
         self.process_message_sync('黑社會')
         self.verify_single_audio_message('黑社會', 'zh-HK')
-        self.verify_messages(["underworld",
+        self.verify_messages(["criminal underworld",
             """黑社會: hāksěwúi, underworld"""])        
 
         self.process_message_sync('when do we use this ?')
@@ -198,7 +198,7 @@ class TestChatModel(unittest.TestCase):
         # send input sentence
         self.process_message_sync('黑社會')
         self.verify_single_audio_message('黑社會', 'zh-HK')
-        self.verify_messages(["underworld",
+        self.verify_messages(["criminal underworld",
             """黑社會: hāksěwúi, underworld"""])        
 
         self.process_message_sync('pronounce using amazon service')

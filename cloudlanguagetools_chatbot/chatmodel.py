@@ -30,9 +30,8 @@ REQUEST_TIMEOUT=10
 holds an instance of a conversation
 """
 class ChatModel():
-    FUNCTION_NAME_TRANSLATE = 'translate'
+    FUNCTION_NAME_TRANSLATE_OR_DICT = 'translate_or_lookup'
     FUNCTION_NAME_TRANSLITERATE = 'transliterate'
-    FUNCTION_NAME_DICTIONARY_LOOKUP = 'dictionary_lookup'
     FUNCTION_NAME_BREAKDOWN = 'breakdown'
     FUNCTION_NAME_PRONOUNCE = 'pronounce'
 
@@ -220,20 +219,15 @@ class ChatModel():
         else:
             # text-based functions
             try:
-                if function_name == self.FUNCTION_NAME_TRANSLATE:
-                    translate_query = cloudlanguagetools.chatapi.TranslateQuery(**arguments)
-                    async_translate = sync_to_async(self.chatapi.translate)
+                if function_name == self.FUNCTION_NAME_TRANSLATE_OR_DICT:
+                    translate_query = cloudlanguagetools.chatapi.TranslateLookupQuery(**arguments)
+                    async_translate = sync_to_async(self.chatapi.translate_or_lookup)
                     result = await async_translate(translate_query)
                     send_message_to_user = True
                 elif function_name == self.FUNCTION_NAME_TRANSLITERATE:
                     query = cloudlanguagetools.chatapi.TransliterateQuery(**arguments)
                     async_transliterate = sync_to_async(self.chatapi.transliterate)
                     result = await async_transliterate(query)
-                    send_message_to_user = True
-                elif function_name == self.FUNCTION_NAME_DICTIONARY_LOOKUP:
-                    query = cloudlanguagetools.chatapi.DictionaryLookup(**arguments)
-                    async_dictionary_lookup = sync_to_async(self.chatapi.dictionary_lookup)
-                    result = await async_dictionary_lookup(query)
                     send_message_to_user = True
                 elif function_name == self.FUNCTION_NAME_BREAKDOWN:
                     query = cloudlanguagetools.chatapi.BreakdownQuery(**arguments)
@@ -254,19 +248,14 @@ class ChatModel():
     def get_openai_functions(self):
         return [
             {
-                'name': self.FUNCTION_NAME_TRANSLATE,
-                'description': "Translate input text from source language to target language",
-                'parameters': cloudlanguagetools.chatapi.TranslateQuery.model_json_schema(),
+                'name': self.FUNCTION_NAME_TRANSLATE_OR_DICT,
+                'description': "Translate or do a dictionary lookup for input text from source language to target language",
+                'parameters': cloudlanguagetools.chatapi.TranslateLookupQuery.model_json_schema(),
             },
             {
                 'name': self.FUNCTION_NAME_TRANSLITERATE,
                 'description': "Transliterate the input text in the given language",
                 'parameters': cloudlanguagetools.chatapi.TransliterateQuery.model_json_schema(),
-            },
-            {
-                'name': self.FUNCTION_NAME_DICTIONARY_LOOKUP,
-                'description': "Lookup the input word in the given language",
-                'parameters': cloudlanguagetools.chatapi.DictionaryLookup.model_json_schema(),
             },
             {
                 'name': self.FUNCTION_NAME_BREAKDOWN,
