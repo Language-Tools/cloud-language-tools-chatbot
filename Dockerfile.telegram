@@ -3,6 +3,11 @@ RUN apt-get update -y && apt-get install -y libasound2 python3-pip build-essenti
 
 # install python dependencies
 RUN pip3 install --upgrade pip
+
+# install cloudlanguagetools-core requirements, which shoud not change often
+RUN pip3 install --no-cache-dir clt_wenlin==1.0 && pip3 cache purge
+RUN pip3 install --no-cache-dir clt_requirements==0.9 && pip3 cache purge
+
 COPY requirements.txt ./
 RUN pip3 install --no-cache-dir -r requirements.txt && pip3 cache purge
 
