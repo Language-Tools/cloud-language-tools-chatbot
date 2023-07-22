@@ -25,7 +25,7 @@ class CategorizeInputQuery(pydantic.BaseModel):
     instructions: Optional[str] = pydantic.Field(description=prompts.DESCRIPTION_FLD_INSTRUCTIONS)
 
 
-REQUEST_TIMEOUT=10
+REQUEST_TIMEOUT=15
 
 """
 holds an instance of a conversation
