@@ -232,4 +232,38 @@ class TestChatModel(unittest.TestCase):
 
         self.assertEquals(self.categorize_input_type_sync('黑社會', 
         'instruction: translate from french to english').input_type,
-                                                   InputType.instructions)                                                   
+                                                   InputType.instructions)
+
+        self.assertEquals(self.categorize_input_type_sync(None, 
+        '成绩').input_type,
+                                                   InputType.new_sentence) 
+
+
+    def test_mandarin_pinyin_1(self):
+        # pytest --log-cli-level=INFO tests/test_chatmodel.py -k test_mandarin_pinyin_1
+
+        # set instructions
+        self.chat_model.set_instruction('I will send you some sentences in Chinese, follow my commands')
+
+        # send input sentence
+        self.process_message_sync('成绩')
+        self.process_message_sync('pinyin')
+
+        logger.debug(f'message_list: {self.message_list}')
+        self.assertEquals(len(self.message_list), 2)
+        self.assertEquals(self.message_list[1], 'chéngjì')
+
+
+    def test_cantonese_jyutping_1(self):
+        # pytest --log-cli-level=INFO tests/test_chatmodel.py -k test_cantonese_jyutping_1
+
+        # set instructions
+        self.chat_model.set_instruction('I will send you some sentences in Cantonese, follow my commands')
+
+        # send input sentence
+        self.process_message_sync('山路')
+        self.process_message_sync('jyutping')
+
+        logger.debug(f'message_list: {self.message_list}')
+        self.assertEquals(len(self.message_list), 2)
+        self.assertEquals(self.message_list[1], 'sāanlou')

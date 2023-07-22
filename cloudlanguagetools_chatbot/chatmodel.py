@@ -110,9 +110,10 @@ class ChatModel():
     async def categorize_input_type(self, last_input_sentence, input_sentence) -> InputType:
         """return true if input is a new sentence. we'll use this to clear history"""
 
-        last_input_sentence_entry = []
         if last_input_sentence != None:
             last_input_sentence_entry = [{"role": "user", "content": last_input_sentence}]
+        else:
+            last_input_sentence_entry = [{"role": "user", "content": "There is no previous sentence"}]
 
         messages = [
             {"role": "system", "content": prompts.SYSTEM_MSG_ASSISTANT}
@@ -272,7 +273,7 @@ class ChatModel():
             },
             {
                 'name': self.FUNCTION_NAME_TRANSLITERATE,
-                'description': "Transliterate the input text in the given language",
+                'description': "Transliterate the input text in the given language. This can be used for Pinyin or Jyutping for Chinese, or Romaji for Japanese",
                 'parameters': cloudlanguagetools.chatapi.TransliterateQuery.model_json_schema(),
             },
             {

@@ -9,7 +9,7 @@ to explain, translate, transliterate, pronounce, lookup or break down the previo
 or a set of instructions of tasks to run repeatedly on the next input sentence."""
 
 DESCRIPTION_FLD_IS_NEW_QUESTION = """NEW_SENTENCE if the last user message is a new input sentence unrelated to the previous one,
-particularly if the input sentence is not in English.
+particularly if the input sentence is not in English, or if there is no previous input sentence.
 QUESTION_OR_COMMAND if it is a question regarding the meaning, grammar, vocabulary of the previous sentence, or a command
 to explain, translate, transliterate, pronounce, lookup or break down the previous sentence. Examples of this include:
 - What does it mean ?
