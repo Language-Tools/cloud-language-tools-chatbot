@@ -10,6 +10,7 @@ from strenum import StrEnum
 from asgiref.sync import  sync_to_async
 import cloudlanguagetools.chatapi
 import cloudlanguagetools.options
+import cloudlanguagetools.encryption
 from cloudlanguagetools_chatbot import prompts
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,19 @@ class ChatModel():
         self.last_call_messages = None
         self.last_input_sentence = None
         self.audio_format = audio_format
+
+        # to use the Azure OpenAI API
+        use_azure_openai = True
+        if use_azure_openai:
+            # configure openai
+            # https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/function-calling
+            # https://github.com/openai/openai-python/issues/517#issuecomment-1645092367
+            azure_openai_config = cloudlanguagetools.encryption.decrypt()['OpenAI']
+            openai.api_type = "azure"
+            openai.api_base = azure_openai_config['azure_endpoint']
+            openai.api_version = "2023-07-01-preview"
+            openai.api_key = azure_openai_config['azure_api_key']
+            self.azure_openai_deployment_name = azure_openai_config['azure_deployment_name']
     
     def set_instruction(self, instruction):
         self.instruction = instruction
@@ -80,9 +94,10 @@ class ChatModel():
         logger.debug(f"sending messages to openai: {pprint.pformat(messages)}")
 
         response = await openai.ChatCompletion.acreate(
-            model="gpt-3.5-turbo-0613",
-            # require larger context
-            # model="gpt-3.5-turbo-16k",
+            # for OpenAI:
+            # model="gpt-3.5-turbo-0613"
+            # for Azure:
+            engine=self.azure_openai_deployment_name,
             messages=messages,
             functions=self.get_openai_functions(),
             function_call= "auto",
@@ -108,7 +123,10 @@ class ChatModel():
         categorize_input_type_name = 'category_input_type'
 
         response = await openai.ChatCompletion.acreate(
-            model="gpt-3.5-turbo-0613",
+            # for OpenAI:
+            # model="gpt-3.5-turbo-0613"
+            # for Azure:            
+            engine=self.azure_openai_deployment_name,
             messages=messages,
             functions=[{
                 'name': categorize_input_type_name,
